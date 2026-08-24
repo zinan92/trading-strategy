@@ -175,7 +175,7 @@ The extracted package files are:
 
 - Extraction commit: `0f4a5df3a5c30bcd2e07dfc2e99ab8b0f8288cbc`
 - Commit message: `extract canonical dca and grid strategy foundation`
-- Remediation commits: `009fef4`, `b16bc93`, `b084c9a`, `074f172`.
+- Remediation commits: `009fef4`, `b16bc93`, `b084c9a`, `074f172`, `754aa29`.
 - The final verification metadata update is intentionally a separate local
   commit so this file can contain the actual extraction SHA without a
   self-referential commit hash.
@@ -184,7 +184,7 @@ The extracted package files are:
 
 New package command: `python3 -m pytest -q`
 
-Result after the acceptance-gap implementation: `48 passed in 4.06s`;
+Result after the acceptance-gap implementation: `48 passed in 4.19s`;
 skipped: `0`; failures: `0`.
 
 Compile command: `python3 -m compileall -q trading_strategy tests tools`
@@ -216,7 +216,7 @@ are rejected as expected.
 
 Secret scan command: `gitleaks dir --no-banner .`
 
-Result: scanned `661.79 KB`; `no leaks found`.
+Result: scanned `668.45 KB`; `no leaks found`.
 
 Ruff check: the source environment has no `ruff` executable (`RUFF_UNAVAILABLE`);
 there is no existing project ruff configuration to invoke. This is recorded as
