@@ -36,11 +36,22 @@ def test_package_imports_only_stdlib_or_its_own_modules() -> None:
 def test_no_broker_native_module_or_implicit_second_algorithm_is_exposed() -> None:
     with pytest.raises(ModuleNotFoundError):
         importlib.import_module("trading_strategy.broker")
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("trading_strategy.standard_broker_external_dca")
 
     assert trading_strategy.build_dca_preview.__module__ == "trading_strategy.dca_plan"
     assert trading_strategy.build_grid_preview.__module__ == "trading_strategy.grid_sizing"
-    assert not hasattr(trading_strategy, "build_external_dca_preview")
-    assert not hasattr(trading_strategy, "build_broker_grid_preview")
+    assert trading_strategy.build_dragged_range.__module__ == "trading_strategy.grid_range_adjustment"
+    assert trading_strategy.build_range_extension.__module__ == "trading_strategy.grid_range_adjustment"
+    assert not hasattr(trading_strategy, "ExternalDcaPlan")
+    assert not hasattr(trading_strategy, "ExternalDcaLifecycle")
+
+
+def test_real_external_dca_symbols_are_not_copied_into_the_package() -> None:
+    for path in PACKAGE_ROOT.rglob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        assert "ExternalDcaPlan" not in source
+        assert "ExternalDcaLifecycle" not in source
 
 
 def test_broker_native_object_injection_is_rejected_at_the_pure_boundary() -> None:

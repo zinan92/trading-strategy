@@ -7,8 +7,15 @@ prints deterministic JSON. The committed fixture is checked with ``diff``.
 
 from __future__ import annotations
 
+import argparse
 import json
+import hashlib
+import io
+import subprocess
 import sys
+import tarfile
+import tempfile
+from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -16,22 +23,129 @@ from pathlib import Path
 
 SOURCE_ROOT = Path("/Users/wendy/work/trading-system-testnet")
 SOURCE_BASELINE_SHA = "b841800ee03fd98107063c0cbbf5144096a5c4c0"
-sys.path.insert(0, str(SOURCE_ROOT))
+SOURCE_FILES = (
+    "services/dca_plan.py",
+    "services/grid_sizing.py",
+    "services/dualtrack_grid_core.py",
+    "services/dualtrack_execution_contract.py",
+    "services/dualtrack_costs.py",
+    "services/venue_costs.py",
+    "services/grid_marketability.py",
+    "services/grid_range_adjustment.py",
+    "schemas/market_data.py",
+)
 
-from services.dca_plan import (  # noqa: E402
-    build_dca_entry_commands,
-    build_dca_preview,
-    build_dca_strategy_plan,
-    replay_dca_marks,
-)
-from services.dualtrack_grid_core import (  # noqa: E402
-    Bar,
-    GridLineLifecycle,
-    GridStop,
-    simulate_conditional_grid,
-    simulate_explicit_grid,
-)
-from services.grid_sizing import build_grid_preview  # noqa: E402
+
+def _git(*arguments: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(SOURCE_ROOT), *arguments],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
+
+
+def _source_head() -> str:
+    return _git("rev-parse", "HEAD")
+
+
+def _changed_relevant_files() -> list[str]:
+    status = _git(
+        "status",
+        "--short",
+        "--untracked-files=all",
+        "--",
+        *SOURCE_FILES,
+    )
+    return [line[3:] for line in status.splitlines() if line.strip()]
+
+
+def validate_source_baseline(
+    *,
+    actual_head: str,
+    changed_relevant_files: list[str],
+) -> None:
+    if actual_head != SOURCE_BASELINE_SHA:
+        raise RuntimeError(
+            "source HEAD mismatch: "
+            f"expected {SOURCE_BASELINE_SHA}, got {actual_head}"
+        )
+    if changed_relevant_files:
+        raise RuntimeError(
+            "relevant source files are dirty: "
+            + ", ".join(sorted(changed_relevant_files))
+        )
+
+
+def verify_source_baseline() -> dict[str, object]:
+    actual_head = _source_head()
+    changed_relevant_files = _changed_relevant_files()
+    validate_source_baseline(
+        actual_head=actual_head,
+        changed_relevant_files=changed_relevant_files,
+    )
+    source_file_sha256 = source_file_hashes(SOURCE_ROOT)
+    return {
+        "source_baseline_sha": actual_head,
+        "changed_relevant_files": changed_relevant_files,
+        "source_file_sha256": source_file_sha256,
+    }
+
+
+def source_file_hashes(root: Path) -> dict[str, str]:
+    return {
+        relative: hashlib.sha256((root / relative).read_bytes()).hexdigest()
+        for relative in SOURCE_FILES
+    }
+
+
+def _load_source_modules(root: Path) -> None:
+    global Bar
+    global GridLineLifecycle
+    global GridStop
+    global build_dca_entry_commands
+    global build_dca_preview
+    global build_dca_strategy_plan
+    global build_deterministic_dca_candidate_payload_v1
+    global build_grid_preview
+    global replay_dca_marks
+    global simulate_conditional_grid
+    global simulate_explicit_grid
+
+    sys.path.insert(0, str(root))
+    from services.dca_plan import (
+        build_dca_entry_commands,
+        build_dca_preview,
+        build_dca_strategy_plan,
+        build_deterministic_dca_candidate_payload_v1,
+        replay_dca_marks,
+    )
+    from services.dualtrack_grid_core import (
+        Bar,
+        GridLineLifecycle,
+        GridStop,
+        simulate_conditional_grid,
+        simulate_explicit_grid,
+    )
+    from services.grid_sizing import (
+        build_adaptive_grid_preview,
+        build_grid_preview,
+    )
+    globals()["build_adaptive_grid_preview"] = build_adaptive_grid_preview
+
+
+@contextmanager
+def _source_snapshot(source_ref: str):
+    archive = subprocess.run(
+        ["git", "-C", str(SOURCE_ROOT), "archive", source_ref],
+        check=True,
+        capture_output=True,
+    ).stdout
+    with tempfile.TemporaryDirectory(prefix="trading-strategy-source-") as root:
+        with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as bundle:
+            bundle.extractall(root, filter="data")
+        yield Path(root)
 
 
 DCA_CONFIG = {
@@ -194,7 +308,7 @@ def grid_preview_summary(preview: dict) -> dict:
     }
 
 
-def main() -> None:
+def _capture(source_receipt: dict[str, object]) -> dict:
     preview = build_dca_preview(
         "golden-dca",
         dca_payload(),
@@ -323,9 +437,40 @@ def main() -> None:
             "synthetic_range_rearm": asdict(synthetic_rearm),
             "terminal_flatten": asdict(terminal_flatten),
         },
-        "source_baseline_sha": SOURCE_BASELINE_SHA,
+        "source_baseline_sha": source_receipt["source_baseline_sha"],
+        "source_file_sha256": source_receipt["source_file_sha256"],
     }
-    print(json.dumps(output, sort_keys=True, indent=2))
+    return output
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--source-ref",
+        help=(
+            "Read the pinned source from a Git object snapshot. Without this "
+            "flag, the current source checkout HEAD must equal the pinned SHA."
+        ),
+    )
+    args = parser.parse_args()
+    if args.source_ref:
+        validate_source_baseline(
+            actual_head=str(args.source_ref),
+            changed_relevant_files=[],
+        )
+        with _source_snapshot(str(args.source_ref)) as root:
+            _load_source_modules(root)
+            receipt = {
+                "source_baseline_sha": str(args.source_ref),
+                "changed_relevant_files": [],
+                "source_file_sha256": source_file_hashes(root),
+            }
+            print(json.dumps(_capture(receipt), sort_keys=True, indent=2))
+        return
+
+    receipt = verify_source_baseline()
+    _load_source_modules(SOURCE_ROOT)
+    print(json.dumps(_capture(receipt), sort_keys=True, indent=2))
 
 
 if __name__ == "__main__":
