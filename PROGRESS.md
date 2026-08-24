@@ -124,6 +124,13 @@ The two read-only audits established the following import/behavior closure:
   plan and explicit replay use different field shapes (`price/tp/sl` versus
   `entry/take_profit`); Grid plan Hard Stop wins over ambiguous same-bar entry;
   partial Grid close requires entry-cancel confirmation before re-arm.
+- Provenance is fail-closed in two modes: the default mutable-checkout mode
+  requires the pinned HEAD and clean relevant files, while explicit
+  `--source-ref b841800...` captures from a local Git-object snapshot. Both
+  modes compare relevant source hashes against a committed expected digest map.
+- The boundary test identifies the real host module symbols
+  `ExternalDcaPlan`/`ExternalDcaLifecycle` and verifies neither the symbols nor
+  the host module are copied into the package.
 
 The extracted package files are:
 

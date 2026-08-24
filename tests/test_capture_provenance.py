@@ -21,6 +21,11 @@ def test_source_capture_is_bound_to_pinned_head_and_relevant_file_hashes(
         lambda: capture.SOURCE_BASELINE_SHA,
     )
     monkeypatch.setattr(capture, "_changed_relevant_files", lambda: [])
+    monkeypatch.setattr(
+        capture,
+        "source_file_hashes",
+        lambda _root: dict(capture.EXPECTED_SOURCE_FILE_SHA256),
+    )
     receipt = capture.verify_source_baseline()
 
     assert receipt["source_baseline_sha"] == capture.SOURCE_BASELINE_SHA
@@ -74,3 +79,11 @@ def test_source_capture_rejects_relevant_worktree_drift() -> None:
             actual_head=capture.SOURCE_BASELINE_SHA,
             changed_relevant_files=["services/dca_plan.py"],
         )
+
+
+def test_source_capture_rejects_relevant_content_drift() -> None:
+    changed_hashes = dict(capture.EXPECTED_SOURCE_FILE_SHA256)
+    changed_hashes["services/dca_plan.py"] = "0" * 64
+
+    with pytest.raises(RuntimeError, match="pinned source file hash mismatch"):
+        capture.validate_source_file_hashes(changed_hashes)

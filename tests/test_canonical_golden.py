@@ -372,6 +372,18 @@ def test_dca_candidate_preserves_both_direction_contracts(
             None,
             None,
         ),
+        (
+            3906.25,
+            [3912.11, 3926.564, 3941.018, 3955.472, 3969.926, 3984.38],
+            3867.19,
+            4023.44,
+        ),
+        (
+            3900.25,
+            [3906.1, 3920.532, 3934.964, 3949.396, 3963.828, 3978.26],
+            3861.25,
+            4017.26,
+        ),
     ],
 )
 def test_dca_candidate_preserves_float_boundary_rounding(
@@ -380,8 +392,9 @@ def test_dca_candidate_preserves_float_boundary_rounding(
     expected_target: float | None,
     expected_stop: float | None,
 ) -> None:
+    direction = "short" if expected_target is not None and expected_target < 3900 else "long"
     candidate = build_deterministic_dca_candidate_payload_v1(
-        direction="long",
+        direction=direction,
         market_price=market_price,
     )
 

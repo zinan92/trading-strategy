@@ -34,6 +34,17 @@ SOURCE_FILES = (
     "services/grid_range_adjustment.py",
     "schemas/market_data.py",
 )
+EXPECTED_SOURCE_FILE_SHA256 = {
+    "schemas/market_data.py": "1ba833a4e1119a1f76921b21323f812f1b9ec6468d4a0ac4af5cf74d6b3af2cc",
+    "services/dca_plan.py": "e326d5d4d1e2b69cfbc671fc272b04c268d41d7d7a2bcc5e51f0a1740625dc95",
+    "services/dualtrack_costs.py": "8383d9da496dfa79b96191b36be4daf72af587664d7b9c37cfb6320ca0047493",
+    "services/dualtrack_execution_contract.py": "01a55fad45c749da278eff25e677164f63a6fc9a82c22be7e1022fdfa6f5ae83",
+    "services/dualtrack_grid_core.py": "d2b489fba0c43b4d0edd031c6f2a1f0fb5d4efcdf6b231b47857118d10a1b039",
+    "services/grid_marketability.py": "e11c299d66b29d808706c0c66f0c5c4a0cdf39e4dda6361f2fa6a6a6282fe1e4",
+    "services/grid_range_adjustment.py": "be2dddbe258a5dc3ec2ddac7ac5e4363d7e1dcbd07f362e225e5aa6b040adba0",
+    "services/grid_sizing.py": "36394b4a80693d531734492eec333c683c64378cc689f463a051c744ad00cf81",
+    "services/venue_costs.py": "f17c76c2d5523269b426489bab3700761d68c10ca01aa28e655540b4c9670776",
+}
 
 
 def _git(*arguments: str) -> str:
@@ -78,6 +89,18 @@ def validate_source_baseline(
         )
 
 
+def validate_source_file_hashes(actual_hashes: dict[str, str]) -> None:
+    if actual_hashes != EXPECTED_SOURCE_FILE_SHA256:
+        changed = sorted(
+            relative
+            for relative in set(actual_hashes) | set(EXPECTED_SOURCE_FILE_SHA256)
+            if actual_hashes.get(relative) != EXPECTED_SOURCE_FILE_SHA256.get(relative)
+        )
+        raise RuntimeError(
+            "pinned source file hash mismatch: " + ", ".join(changed)
+        )
+
+
 def verify_source_baseline() -> dict[str, object]:
     actual_head = _source_head()
     changed_relevant_files = _changed_relevant_files()
@@ -86,6 +109,7 @@ def verify_source_baseline() -> dict[str, object]:
         changed_relevant_files=changed_relevant_files,
     )
     source_file_sha256 = source_file_hashes(SOURCE_ROOT)
+    validate_source_file_hashes(source_file_sha256)
     return {
         "source_baseline_sha": actual_head,
         "changed_relevant_files": changed_relevant_files,
@@ -460,10 +484,12 @@ def main() -> None:
         )
         with _source_snapshot(str(args.source_ref)) as root:
             _load_source_modules(root)
+            source_file_sha256 = source_file_hashes(root)
+            validate_source_file_hashes(source_file_sha256)
             receipt = {
                 "source_baseline_sha": str(args.source_ref),
                 "changed_relevant_files": [],
-                "source_file_sha256": source_file_hashes(root),
+                "source_file_sha256": source_file_sha256,
             }
             print(json.dumps(_capture(receipt), sort_keys=True, indent=2))
         return

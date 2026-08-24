@@ -48,8 +48,16 @@ def test_no_broker_native_module_or_implicit_second_algorithm_is_exposed() -> No
 
 
 def test_real_external_dca_symbols_are_not_copied_into_the_package() -> None:
+    host_module = Path(
+        "/Users/wendy/work/trading-system-testnet/services/standard_broker_external_dca.py"
+    )
+    host_source = host_module.read_text(encoding="utf-8")
+    assert "class ExternalDcaPlan" in host_source
+    assert "class ExternalDcaLifecycle" in host_source
+
     for path in PACKAGE_ROOT.rglob("*.py"):
         source = path.read_text(encoding="utf-8")
+        assert "services.standard_broker_external_dca" not in source
         assert "ExternalDcaPlan" not in source
         assert "ExternalDcaLifecycle" not in source
 

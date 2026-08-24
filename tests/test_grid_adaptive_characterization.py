@@ -42,7 +42,12 @@ CONFIG = {
 }
 
 
-def market(*, close: float = 4_137.44, fresh: bool = True) -> dict:
+def market(
+    *,
+    close: float = 4_137.44,
+    fresh: bool = True,
+    synthetic: bool = False,
+) -> dict:
     bars = []
     for index in range(40):
         bar_close = close - 2.0 + index * 0.05
@@ -78,7 +83,7 @@ def market(*, close: float = 4_137.44, fresh: bool = True) -> dict:
     return {
         "status": "ready" if fresh else "stale",
         "fresh": fresh,
-        "is_synthetic": False,
+        "is_synthetic": synthetic,
         "provider": "binance_usdm",
         "source_mode": "binance_usdm",
         "symbol": "GOLD",
@@ -265,4 +270,12 @@ def test_adaptive_solver_rejects_stale_market() -> None:
         adaptive_preview(
             {"direction": "neutral", "style": "steady"},
             market_data=market(fresh=False),
+        )
+
+
+def test_adaptive_solver_rejects_synthetic_market() -> None:
+    with pytest.raises(ValueError, match="synthetic"):
+        adaptive_preview(
+            {"direction": "neutral", "style": "steady"},
+            market_data=market(synthetic=True),
         )
