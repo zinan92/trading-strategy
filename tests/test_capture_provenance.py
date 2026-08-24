@@ -4,6 +4,7 @@ import json
 import hashlib
 import importlib
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -65,20 +66,15 @@ def test_capture_can_reproduce_the_pinned_git_object_without_current_checkout() 
     assert receipt["fixture_sha256"] == hashlib.sha256(fixture.encode()).hexdigest()
 
 
-def test_default_capture_is_end_to_end_fail_closed_on_current_checkout_drift() -> None:
-    result = subprocess.run(
-        ["python3", "tools/capture_canonical_golden.py"],
-        cwd=Path(__file__).parents[1],
-        capture_output=True,
-        text=True,
-    )
-    current_head = capture._source_head()
-    current_dirty = capture._changed_relevant_files()
-    if current_head != capture.SOURCE_BASELINE_SHA or current_dirty:
-        assert result.returncode != 0
-        assert "source HEAD mismatch" in result.stderr or "relevant source files are dirty" in result.stderr
-    else:
-        assert result.returncode == 0, result.stderr
+def test_default_capture_main_is_fail_closed_on_mismatched_head(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(capture, "_source_head", lambda: "wrong-source-head")
+    monkeypatch.setattr(capture, "_changed_relevant_files", lambda: [])
+    monkeypatch.setattr(sys, "argv", ["capture_canonical_golden.py"])
+
+    with pytest.raises(RuntimeError, match="source HEAD mismatch"):
+        capture.main()
 
 
 def test_source_capture_rejects_a_different_head() -> None:

@@ -483,9 +483,9 @@ def main() -> None:
             changed_relevant_files=[],
         )
         with _source_snapshot(str(args.source_ref)) as root:
-            _load_source_modules(root)
             source_file_sha256 = source_file_hashes(root)
             validate_source_file_hashes(source_file_sha256)
+            _load_source_modules(root)
             receipt = {
                 "source_baseline_sha": str(args.source_ref),
                 "changed_relevant_files": [],

@@ -358,27 +358,31 @@ def test_dca_candidate_preserves_both_direction_contracts(
 
 
 @pytest.mark.parametrize(
-    ("market_price", "expected_levels", "expected_target", "expected_stop"),
+    ("direction", "market_price", "expected_levels", "expected_target", "expected_stop"),
     [
         (
+            "long",
             3906.25,
             [3900.39, 3885.938, 3871.486, 3857.034, 3842.582, 3828.13],
             3945.31,
             3789.06,
         ),
         (
+            "long",
             3900.25,
             [3894.4, 3879.968, 3865.536, 3851.104, 3836.672, 3822.24],
-            None,
-            None,
+            3939.25,
+            3783.24,
         ),
         (
+            "short",
             3906.25,
             [3912.11, 3926.564, 3941.018, 3955.472, 3969.926, 3984.38],
             3867.19,
             4023.44,
         ),
         (
+            "short",
             3900.25,
             [3906.1, 3920.532, 3934.964, 3949.396, 3963.828, 3978.26],
             3861.25,
@@ -387,21 +391,24 @@ def test_dca_candidate_preserves_both_direction_contracts(
     ],
 )
 def test_dca_candidate_preserves_float_boundary_rounding(
+    direction: str,
     market_price: float,
     expected_levels: list[float],
-    expected_target: float | None,
-    expected_stop: float | None,
+    expected_target: float,
+    expected_stop: float,
 ) -> None:
-    direction = "short" if expected_target is not None and expected_target < 3900 else "long"
     candidate = build_deterministic_dca_candidate_payload_v1(
         direction=direction,
         market_price=market_price,
     )
 
-    assert candidate["dca"]["entry_levels"] == pytest.approx(expected_levels)
-    if expected_target is not None:
-        assert candidate["dca"]["target_price"] == expected_target
-        assert candidate["dca"]["stop_price"] == expected_stop
+    assert candidate["dca"]["entry_levels"] == pytest.approx(
+        expected_levels,
+        rel=0,
+        abs=1e-12,
+    )
+    assert candidate["dca"]["target_price"] == expected_target
+    assert candidate["dca"]["stop_price"] == expected_stop
 
 
 def test_grid_conditional_replay_matches_locked_golden_stop_rearm_and_flatten() -> None:
