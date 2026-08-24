@@ -47,7 +47,7 @@ python3 -m pytest -q tests/test_dca_plan.py tests/test_dca_execution_lifecycle.p
 Result: `135 passed in 3.72s`; skipped: `0`; failures: `0`.
 
 Reconfirmed after remediation from a temporary `git archive` of pinned source
-ref `b841800ee03fd98107063c0cbbf5144096a5c4c0`: `135 passed in 4.10s`;
+ref `b841800ee03fd98107063c0cbbf5144096a5c4c0`: `135 passed in 3.85s`;
 skipped: `0`; failures: `0`.
 
 ### Full source baseline (complete)
@@ -175,6 +175,7 @@ The extracted package files are:
 
 - Extraction commit: `0f4a5df3a5c30bcd2e07dfc2e99ab8b0f8288cbc`
 - Commit message: `extract canonical dca and grid strategy foundation`
+- Remediation commits: `009fef4`, `b16bc93`, `b084c9a`, `074f172`.
 - The final verification metadata update is intentionally a separate local
   commit so this file can contain the actual extraction SHA without a
   self-referential commit hash.
@@ -195,6 +196,9 @@ Golden capture command: `python3 tools/capture_canonical_golden.py --source-ref 
 Result: `GOLDEN_CAPTURE_DIFF_PASS`; fixture SHA-256 and source SHA are recorded
 in `tests/fixtures/canonical_golden.receipt.json`.
 
+Default mutable-checkout capture result: `DEFAULT_CAPTURE_FAIL_CLOSED` with
+`source HEAD mismatch` against the later source checkout drift.
+
 Source-copy comparison command: compare the six copied source modules against
 their source counterparts after normalizing only the intentional internal
 import paths.
@@ -214,7 +218,7 @@ are rejected as expected.
 
 Secret scan command: `gitleaks dir --no-banner .`
 
-Result: scanned `606.96 KB`; `no leaks found`.
+Result: scanned `661.79 KB`; `no leaks found`.
 
 Ruff check: the source environment has no `ruff` executable (`RUFF_UNAVAILABLE`);
 there is no existing project ruff configuration to invoke. This is recorded as
