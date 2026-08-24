@@ -233,6 +233,24 @@ def test_adaptive_solver_caps_auto_sizing_at_manual_paper_capacity() -> None:
     }
 
 
+def test_auto_density_skips_counts_below_venue_price_precision() -> None:
+    preview = build_grid_preview(
+        "2026-07-05_DAY",
+        {
+            "direction": "neutral",
+            "style": "steady",
+            "range": {"low": 109.65, "high": 110.34},
+        },
+        market=market(close=110.0),
+        account={"equity": 2_000_000.0},
+        config=CONFIG,
+    )
+
+    assert 30 <= preview["grid"]["count"] < 70
+    assert preview["grid"]["profit_target_met"] is True
+    assert all(order["price"] != order["tp"] for order in preview["orders"])
+
+
 def test_adaptive_solver_rejects_fractional_locked_count() -> None:
     with pytest.raises(ValueError, match="locked grid count must be an integer"):
         adaptive_preview(

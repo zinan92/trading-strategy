@@ -183,7 +183,7 @@ The extracted package files are:
 
 New package command: `python3 -m pytest -q`
 
-Result after the acceptance-gap implementation: `42 passed in 4.04s`;
+Result after the acceptance-gap implementation: `48 passed in 4.06s`;
 skipped: `0`; failures: `0`.
 
 Compile command: `python3 -m compileall -q trading_strategy tests tools`

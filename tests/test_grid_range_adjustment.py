@@ -353,6 +353,16 @@ def test_new_edge_dedupes_live_exposure_but_rearms_after_completed_fill() -> Non
     )
     assert [row["price"] for row in completed["edge_orders"]] == [99.0]
 
+    closed_position = build_range_extension(
+        plan["cycle_id"],
+        plan,
+        {"low": 99.0, "high": 132.0},
+        market=market(116.0),
+        accepted_entries=[],
+        positions=[{"status": "closed", "side": "long", "entry_price": 99.0}],
+    )
+    assert [row["price"] for row in closed_position["edge_orders"]] == [99.0]
+
 
 def test_adjustment_rejects_range_that_excludes_current_market() -> None:
     with pytest.raises(ValueError, match="market_outside_requested_range"):
