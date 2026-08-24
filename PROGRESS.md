@@ -199,9 +199,7 @@ in `tests/fixtures/canonical_golden.receipt.json`.
 Default mutable-checkout capture result: `DEFAULT_CAPTURE_FAIL_CLOSED` with
 `source HEAD mismatch` against the later source checkout drift.
 
-Source-copy comparison command: compare the six copied source modules against
-their source counterparts after normalizing only the intentional internal
-import paths.
+Source-copy comparison command: `python3 tools/compare_pinned_source.py`
 
 Result: `PINNED_COPY_COMPARISON_PASS`, `modules_checked=7`,
 `source_ref=b841800ee03fd98107063c0cbbf5144096a5c4c0`.
