@@ -1,3 +1,5 @@
+> **Moved (2026-09-27).** This repository is archived. The code now lives in [zinan92/trading-system](https://github.com/zinan92/trading-system) under `packages/trading-strategy`, together with the rest of the platform behind trade.park-ai-intel.com/trade. Open issues and PRs there.
+
 # trading-strategy
 
 Standalone, engine-neutral Strategy foundation for Canonical DCA and Grid.
